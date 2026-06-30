@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>การใช้ AI ช่วยเขียนโค้ดสร้างเว็บแอปด้วย Antigravity IDE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --bg:        #faf5ff;
+      --surface:   #ffffff;
+      --dark:      #1e0a3c;
+      --accent:    #7c3aed;
+      --accent2:   #a855f7;
+      --accent3:   #e9d5ff;
+      --muted:     #6b7280;
+      --border:    #ddd6fe;
+      --code-bg:   #f5f3ff;
+      --code-fg:   #2e1065;
+      --cm:        #7e22ce;
+      --tg:        #6d28d9;
+      --at:        #0369a1;
+      --st:        #15803d;
+      --vl:        #b45309;
+      --pr:        #0891b2;
+      --sl:        #be185d;
+      --radius:    10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--dark); line-height: 1.85; font-size: 15px; }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #2e1065 0%, #5b21b6 50%, #7c3aed 100%);
+      color: #fff;
+      padding: 36px 60px;
+      border-bottom: 4px solid #2e1065;
+      display: flex; align-items: center; gap: 20px;
+    }
+    header .icon { font-size: 44px; color: #e9d5ff; }
+    header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; text-shadow: 0 1px 4px rgba(0,0,0,.35); }
+    header p  { font-size: 13px; color: #e9d5ff; }
+    header .badge {
+      margin-left: auto;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.3);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    /* LAYOUT */
+    main { max-width: 960px; margin: 36px auto; padding: 0 24px 80px; display: flex; flex-direction: column; gap: 28px; }
+
+    /* NAV PILLS */
+    .nav-pills {
+      display: flex; gap: 8px; flex-wrap: wrap; background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 18px;
+      box-shadow: 0 2px 8px rgba(124,58,237,.08);
+    }
+    .nav-pill {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: 20px;
+      padding: 5px 14px; font-size: 13px; color: var(--accent); text-decoration: none; font-weight: 600;
+      transition: background .15s, color .15s;
+    }
+    .nav-pill:hover { background: var(--accent); color: #fff; }
+
+    /* SECTION */
+    .section {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      box-shadow: 0 2px 14px rgba(124,58,237,.07);
+      border: 1px solid #ddd6fe;
+    }
+    .section-title {
+      font-size: 16px; font-weight: 700; color: var(--dark);
+      border-left: 4px solid var(--accent); padding-left: 12px;
+      margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-title.blue  { border-color: #2563eb; }
+    .section-title.green { border-color: #16a34a; }
+    .section-title.amber { border-color: #d97706; }
+    .section-title.pink  { border-color: #db2777; }
+    .section-title i { color: var(--accent); font-size: 15px; }
+    .section-title.blue  i { color: #2563eb; }
+    .section-title.green i { color: #16a34a; }
+    .section-title.amber i { color: #d97706; }
+    .section-title.pink  i { color: #db2777; }
+
+    /* CODE BLOCK */
+    .code-wrap { position: relative; margin-bottom: 16px; }
+    pre.code-block {
+      background: var(--code-bg);
+      color: var(--code-fg);
+      border-radius: 8px;
+      border: 1px solid #ddd6fe;
+      padding: 18px 20px;
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.9;
+      overflow-x: auto;
+      white-space: pre;
+      margin: 0;
+    }
+    pre.code-block .cm  { color: var(--cm);  font-style: italic; }
+    pre.code-block .tg  { color: var(--tg);  font-weight: 600; }
+    pre.code-block .at  { color: var(--at); }
+    pre.code-block .st  { color: var(--st); }
+    pre.code-block .vl  { color: var(--vl); }
+    pre.code-block .pr  { color: var(--pr); }
+    pre.code-block .sl  { color: var(--sl);  font-weight: 600; }
+    pre.code-block .fn  { color: #7c3aed;   font-weight: 600; }
+    pre.code-block .kw  { color: #5b21b6;   font-weight: 600; }
+    pre.code-block .num { color: #0284c7; }
+    pre.code-block .hl  { background: #e9d5ff; border-radius: 3px; padding: 0 3px; }
+    pre.code-block .ai  { color: #a855f7; font-weight: 600; }
+    pre.code-block .prompt { color: #9333ea; font-style: italic; }
+
+    /* COPY BUTTON */
+    .copy-btn {
+      position: absolute; top: 10px; right: 10px;
+      background: var(--accent); color: #fff; border: none;
+      padding: 4px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+      font-family: 'Sarabun', sans-serif; display: flex; align-items: center; gap: 5px;
+      transition: background .15s;
+      z-index: 2;
+    }
+    .copy-btn:hover { background: #5b21b6; }
+    .copy-btn.copied { background: #16a34a; }
+
+    /* TABLES */
+    table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+    table.tbl th { background: #f5f3ff; color: var(--dark); text-align: left; padding: 10px 14px; font-weight: 700; border-bottom: 2px solid #ddd6fe; }
+    table.tbl td { padding: 9px 14px; border-bottom: 1px solid #ede9fe; vertical-align: top; }
+    table.tbl tr:last-child td { border-bottom: none; }
+    table.tbl tr:hover td { background: #f5f3ff; }
+
+    /* INLINE CODE */
+    code { background: #ede9fe; color: #5b21b6; border-radius: 4px; padding: 1px 7px; font-size: 12.5px; font-family: 'Courier New', monospace; }
+
+    /* NOTES */
+    .note { border-left: 4px solid var(--accent2); background: #faf5ff; border-radius: 6px; padding: 12px 16px; font-size: 13.5px; margin-top: 14px; }
+    .note.warn  { background: #fffbea; border-left-color: #f59e0b; }
+    .note.info  { background: #eff6ff; border-left-color: #3b82f6; }
+    .note.green { background: #f0fdf4; border-left-color: #16a34a; }
+    .note.pink  { background: #fdf2f8; border-left-color: #db2777; }
+    .note i { margin-right: 6px; }
+
+    /* FLOW DIAGRAM */
+    .flow {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 0;
+      margin: 16px 0; justify-content: center;
+    }
+    .flow-box {
+      background: #f5f3ff; border: 2px solid #ddd6fe; border-radius: 10px;
+      padding: 14px 18px; text-align: center; font-size: 13px; min-width: 110px;
+    }
+    .flow-box .flow-icon { font-size: 24px; color: var(--accent); margin-bottom: 4px; }
+    .flow-box .flow-label { font-weight: 700; color: var(--dark); margin-bottom: 2px; }
+    .flow-box .flow-sub { font-size: 11px; color: var(--muted); }
+    .flow-box.hi { border-color: var(--accent); background: #ede9fe; }
+    .flow-arrow { font-size: 22px; color: var(--accent2); padding: 0 8px; }
+
+    /* CARD GRID */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 14px; }
+    .card {
+      background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 10px;
+      padding: 16px; font-size: 13px;
+    }
+    .card .ck { font-weight: 700; color: var(--accent); font-size: 14px; margin-bottom: 6px; }
+    .card .ch { color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+    .card .ci { display: inline-block; margin-top: 8px; background: #e9d5ff; color: #5b21b6; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+    /* PROMPT BOX */
+    .prompt-box {
+      background: #faf5ff;
+      border: 2px dashed #c4b5fd;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 12px 0;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 13.5px;
+      position: relative;
+    }
+    .prompt-box::before {
+      content: 'Prompt ตัวอย่าง';
+      position: absolute; top: -10px; left: 14px;
+      background: var(--accent); color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 2px 10px; border-radius: 8px;
+      font-family: 'Sarabun', sans-serif;
+    }
+    .prompt-box .pq { color: #5b21b6; line-height: 1.7; }
+    .prompt-box .pq i { color: var(--accent); margin-right: 6px; }
+
+    /* STEPS */
+    .steps { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+    .step { display: flex; gap: 14px; align-items: flex-start; }
+    .step-num {
+      flex-shrink: 0; width: 32px; height: 32px; background: var(--accent);
+      color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; margin-top: 2px;
+    }
+    .step-body { flex: 1; }
+    .step-body strong { color: var(--accent); }
+
+    /* EXTENSION CARD */
+    .ext-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 14px; }
+    .ext-card {
+      background: #faf5ff;
+      border: 1px solid #ddd6fe;
+      border-radius: 10px;
+      padding: 16px;
+      border-top: 3px solid var(--accent);
+    }
+    .ext-card .ext-name { font-weight: 700; color: var(--dark); font-size: 14px; margin-bottom: 4px; }
+    .ext-card .ext-id { font-family: 'Courier New', monospace; font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+    .ext-card .ext-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .ext-card .ext-badge { display: inline-block; margin-top: 8px; background: #e9d5ff; color: #5b21b6; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+    /* AI CHAT MOCK */
+    .chat-mock { background: #faf5ff; border: 1px solid #ddd6fe; border-radius: 10px; padding: 16px; margin-top: 12px; }
+    .chat-msg { display: flex; gap: 10px; margin-bottom: 12px; }
+    .chat-msg:last-child { margin-bottom: 0; }
+    .chat-avatar {
+      flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; margin-top: 2px;
+    }
+    .chat-avatar.user { background: #ede9fe; color: var(--accent); }
+    .chat-avatar.ai   { background: var(--accent); color: #fff; }
+    .chat-bubble { flex: 1; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; line-height: 1.65; }
+    .chat-bubble.user { background: #ede9fe; color: #2e1065; border-bottom-left-radius: 4px; }
+    .chat-bubble.ai   { background: #fff; border: 1px solid #ddd6fe; color: var(--dark); border-bottom-right-radius: 4px; }
+    .chat-label { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+    .chat-label.user { color: var(--accent); }
+    .chat-label.ai   { color: #6b7280; }
+
+    /* COMPARISON TABLE */
+    .cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .cmp-card { border-radius: 10px; padding: 16px; font-size: 13.5px; }
+    .cmp-card.bad  { background: #fef2f2; border: 1px solid #fecaca; }
+    .cmp-card.good { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .cmp-card .cmp-title { font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; font-size: 14px; }
+    .cmp-card.bad  .cmp-title { color: #dc2626; }
+    .cmp-card.good .cmp-title { color: #16a34a; }
+    .cmp-card ul { margin-left: 16px; }
+    .cmp-card ul li { margin-bottom: 4px; }
+
+    /* SECTION ANCHOR */
+    .section[id] { scroll-margin-top: 20px; }
+
+    footer { text-align: center; font-size: 12px; color: #aaa; padding-bottom: 24px; }
+    footer i { color: #c4b5fd; margin-right: 5px; }
+
+    p { margin-bottom: 10px; }
+    p:last-child { margin-bottom: 0; }
+    ul { margin: 8px 0 8px 20px; }
+    ul li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="icon"><i class="fa-solid fa-robot"></i></div>
+  <div>
+    <h1>การใช้ AI ในการช่วยเขียนโค้ดสร้างเว็บแอป</h1>
+    <p>วิชาการพัฒนาเว็บแอปสมัยใหม่ &nbsp;|&nbsp; โรงเรียนจอมทอง &nbsp;|&nbsp; ม.4–6 &nbsp;|&nbsp; เครื่องมือ: Antigravity IDE</p>
+  </div>
+  <div class="badge"><i class="fa-solid fa-wand-magic-sparkles" style="margin-right:6px;"></i>AI-Assisted Coding</div>
+</header>
+
+<main>
+
+  <!-- NAV -->
+  <div class="nav-pills">
+    <a class="nav-pill" href="#overview"><i class="fa-solid fa-sitemap"></i> ภาพรวม</a>
+    <a class="nav-pill" href="#why-ai"><i class="fa-solid fa-brain"></i> ทำไมต้องใช้ AI</a>
+    <a class="nav-pill" href="#antigravity"><i class="fa-solid fa-rocket"></i> Antigravity IDE</a>
+    <a class="nav-pill" href="#extensions"><i class="fa-solid fa-puzzle-piece"></i> ส่วนขยาย AI</a>
+    <a class="nav-pill" href="#prompting"><i class="fa-solid fa-comment-dots"></i> การเขียน Prompt</a>
+    <a class="nav-pill" href="#workflow"><i class="fa-solid fa-diagram-project"></i> Workflow</a>
+    <a class="nav-pill" href="#demo"><i class="fa-solid fa-code"></i> ตัวอย่างการใช้งาน</a>
+    <a class="nav-pill" href="#tips"><i class="fa-solid fa-lightbulb"></i> เทคนิคที่ดี</a>
+    <a class="nav-pill" href="#limits"><i class="fa-solid fa-scale-balanced"></i> ข้อควรระวัง</a>
+  </div>
+
+  <!-- 1 OVERVIEW -->
+  <div class="section" id="overview">
+    <div class="section-title"><i class="fa-solid fa-sitemap"></i>1. ภาพรวม — AI กับการพัฒนาเว็บแอป</div>
+    <p>ปัจจุบัน <strong>AI (Artificial Intelligence)</strong> กลายเป็นผู้ช่วยที่ขาดไม่ได้สำหรับนักพัฒนาเว็บ ไม่ว่าจะเป็นการแนะนำโค้ด อธิบายข้อผิดพลาด หรือช่วยสร้าง Component ทั้งหมดจากคำบรรยายภาษาไทย — ทั้งหมดนี้ทำได้ภายในไม่กี่วินาที</p>
+
+    <div class="flow">
+      <div class="flow-box">
+        <div class="flow-icon"><i class="fa-solid fa-user-graduate"></i></div>
+        <div class="flow-label">นักพัฒนา</div>
+        <div class="flow-sub">เขียน Prompt</div>
+      </div>
+      <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+      <div class="flow-box hi">
+        <div class="flow-icon" style="color:#7c3aed;"><i class="fa-solid fa-robot"></i></div>
+        <div class="flow-label">AI Assistant</div>
+        <div class="flow-sub">ประมวลผล</div>
+      </div>
+      <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+      <div class="flow-box">
+        <div class="flow-icon"><i class="fa-solid fa-code"></i></div>
+        <div class="flow-label">โค้ดที่สร้าง</div>
+        <div class="flow-sub">HTML/CSS/JS</div>
+      </div>
+      <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+      <div class="flow-box" style="border-color:#16a34a; background:#f0fdf4;">
+        <div class="flow-icon" style="color:#16a34a;"><i class="fa-solid fa-globe"></i></div>
+        <div class="flow-label">เว็บแอป</div>
+        <div class="flow-sub">พร้อมใช้งาน</div>
+      </div>
+    </div>
+
+    <table class="tbl" style="margin-top:16px;">
+      <tr><th>สิ่งที่ AI ช่วยได้</th><th>ตัวอย่าง</th><th>ประหยัดเวลา</th></tr>
+      <tr><td><strong>เขียนโค้ดจาก Prompt</strong></td><td>สร้างฟอร์มลงทะเบียน, ตาราง, ปุ่มกด</td><td>จากชั่วโมง → นาที</td></tr>
+      <tr><td><strong>อธิบายโค้ด</strong></td><td>บอกว่าโค้ดแต่ละบรรทัดทำอะไร</td><td>ไม่ต้องค้น Stack Overflow</td></tr>
+      <tr><td><strong>แก้ Bug</strong></td><td>วิเคราะห์ Error และเสนอวิธีแก้</td><td>หาสาเหตุได้เร็วขึ้น</td></tr>
+      <tr><td><strong>ปรับปรุงโค้ด</strong></td><td>Refactor, เพิ่ม Comment, จัด Format</td><td>โค้ดสะอาดและอ่านง่ายขึ้น</td></tr>
+      <tr><td><strong>แปลงโค้ด</strong></td><td>แปลง CSS เป็น Tailwind, JS เป็น TypeScript</td><td>ไม่ต้องเรียนรู้ syntax ใหม่ทั้งหมด</td></tr>
+    </table>
+
+    <div class="note"><i class="fa-solid fa-lightbulb" style="color:var(--accent);"></i><strong>AI ไม่ได้แทนที่โปรแกรมเมอร์</strong> แต่ช่วยให้โปรแกรมเมอร์ทำงานได้เร็วขึ้นและมีเวลาคิดแก้ปัญหาที่ซับซ้อนกว่า — ทักษะการเขียน Prompt ที่ดีคือทักษะใหม่ที่นักพัฒนาต้องมี</div>
+  </div>
+
+  <!-- 2 WHY AI -->
+  <div class="section" id="why-ai">
+    <div class="section-title"><i class="fa-solid fa-brain"></i>2. ทำไมต้องใช้ AI ในการเขียนโค้ด</div>
+    <p>การพัฒนาเว็บแอปในปัจจุบันมีเครื่องมือและ Library มากมาย AI ช่วยลดเวลาในการเรียนรู้ไวยากรณ์ใหม่ และช่วยให้โฟกัสกับ <strong>ตรรกะการทำงาน</strong> ได้มากขึ้น</p>
+
+    <div class="cmp-grid">
+      <div class="cmp-card bad">
+        <div class="cmp-title"><i class="fa-solid fa-circle-xmark"></i> การเขียนโค้ดแบบเดิม</div>
+        <ul>
+          <li>ต้องจำ syntax ทุกตัว</li>
+          <li>ค้นหา Stack Overflow ทุกครั้งที่ติด</li>
+          <li>ใช้เวลานานกับงาน repetitive</li>
+          <li>Debug ด้วยการอ่านโค้ดเอง</li>
+          <li>ต้องรู้ library ก่อนจึงใช้ได้</li>
+        </ul>
+      </div>
+      <div class="cmp-card good">
+        <div class="cmp-title"><i class="fa-solid fa-circle-check"></i> การเขียนโค้ดร่วมกับ AI</div>
+        <ul>
+          <li>พิมพ์ Prompt บรรยายสิ่งที่ต้องการ</li>
+          <li>AI เสนอโค้ดและอธิบายทันที</li>
+          <li>งาน repetitive เสร็จในวินาที</li>
+          <li>AI ช่วยวิเคราะห์ Error ก่อน</li>
+          <li>AI แนะนำ library ที่เหมาะสม</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card-grid" style="margin-top:18px;">
+      <div class="card">
+        <div class="ck"><i class="fa-solid fa-bolt" style="margin-right:6px;"></i>เร็วขึ้น 3–10×</div>
+        <div class="ch">งานที่เคยใช้เวลาครึ่งวันสามารถเสร็จภายในไม่กี่นาทีด้วยการเขียน Prompt ที่ดี</div>
+        <div class="ci">ประสิทธิภาพ</div>
+      </div>
+      <div class="card">
+        <div class="ck"><i class="fa-solid fa-graduation-cap" style="margin-right:6px;"></i>เรียนรู้ได้ขณะใช้งาน</div>
+        <div class="ch">AI อธิบายโค้ดที่สร้างขึ้นได้ ทำให้เข้าใจ concept ใหม่ไปพร้อมกัน</div>
+        <div class="ci">การเรียนรู้</div>
+      </div>
+      <div class="card">
+        <div class="ck"><i class="fa-solid fa-shield-halved" style="margin-right:6px;"></i>โค้ดมีคุณภาพสูงขึ้น</div>
+        <div class="ch">AI แนะนำ best practice, Security, และ Performance ที่อาจมองข้ามไป</div>
+        <div class="ci">คุณภาพ</div>
+      </div>
+      <div class="card">
+        <div class="ck"><i class="fa-solid fa-language" style="margin-right:6px;"></i>ภาษาไทยได้เลย</div>
+        <div class="ch">เขียน Prompt เป็นภาษาไทยได้ AI รุ่นใหม่เข้าใจและตอบกลับได้ดีมาก</div>
+        <div class="ci">ใช้งานง่าย</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 ANTIGRAVITY IDE -->
+  <div class="section" id="antigravity">
+    <div class="section-title"><i class="fa-solid fa-rocket"></i>3. รู้จัก Antigravity IDE</div>
+    <p><strong>Antigravity</strong> คือโปรแกรมแก้ไขโค้ด (Code Editor) สมัยใหม่ที่ออกแบบมาให้รองรับการทำงานร่วมกับ AI ตั้งแต่แรก มี Interface ที่เรียบง่าย เหมาะสำหรับผู้เริ่มต้นและผู้ที่มีประสบการณ์แล้ว</p>
+
+    <div class="card-grid">
+      <div class="card" style="border-top: 3px solid var(--accent);">
+        <div class="ck"><i class="fa-solid fa-window-maximize" style="margin-right:6px;"></i>Multi-Panel Layout</div>
+        <div class="ch">แบ่งหน้าจอได้หลาย Panel — Code, Preview, Terminal, AI Chat อยู่ในหน้าต่างเดียว</div>
+        <div class="ci">UI</div>
+      </div>
+      <div class="card" style="border-top: 3px solid #2563eb;">
+        <div class="ck"><i class="fa-solid fa-eye" style="margin-right:6px;color:#2563eb;"></i>Live Preview</div>
+        <div class="ch">ดูผลลัพธ์ HTML/CSS/JS แบบ Real-time ขณะพิมพ์โค้ด ไม่ต้อง Refresh Browser</div>
+        <div class="ci" style="background:#bfdbfe;color:#1e3a8a;">Preview</div>
+      </div>
+      <div class="card" style="border-top: 3px solid #16a34a;">
+        <div class="ck"><i class="fa-solid fa-terminal" style="margin-right:6px;color:#16a34a;"></i>Integrated Terminal</div>
+        <div class="ch">Terminal ในตัว รัน npm, git, และคำสั่งอื่น ๆ โดยไม่ต้องออกจากโปรแกรม</div>
+        <div class="ci" style="background:#bbf7d0;color:#166534;">Terminal</div>
+      </div>
+      <div class="card" style="border-top: 3px solid #d97706;">
+        <div class="ck"><i class="fa-solid fa-puzzle-piece" style="margin-right:6px;color:#d97706;"></i>Extension Support</div>
+        <div class="ch">รองรับส่วนขยาย AI หลากหลาย เชื่อมต่อกับ Claude, GPT-4, Gemini ได้ทันที</div>
+        <div class="ci" style="background:#fde68a;color:#92400e;">ส่วนขยาย</div>
+      </div>
+    </div>
+
+    <p style="margin-top: 18px; font-weight: 700; color: var(--dark);">หน้าต่างหลักของ Antigravity IDE</p>
+    <div style="background:#1e0a3c; border-radius:10px; padding:20px; margin-top:10px; font-family:'Courier New',monospace; font-size:12px; color:#e9d5ff; overflow-x:auto;">
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;display:inline-block;"></span>
+        <span style="width:12px;height:12px;border-radius:50%;background:#febc2e;display:inline-block;"></span>
+        <span style="width:12px;height:12px;border-radius:50%;background:#28c840;display:inline-block;"></span>
+        <span style="margin-left:8px;color:#a855f7;font-size:13px;font-family:'Sarabun',sans-serif;">Antigravity IDE — project/index.html</span>
+      </div>
+      <div style="display:grid; grid-template-columns: 180px 1fr 280px; gap:2px; height:220px;">
+        <!-- SIDEBAR -->
+        <div style="background:#2e1065; padding:10px; border-radius:6px 0 0 6px;">
+          <div style="color:#a855f7; font-size:10px; margin-bottom:8px; font-family:'Sarabun',sans-serif;">📁 EXPLORER</div>
+          <div style="color:#c4b5fd; font-size:11px; margin:3px 0;">📁 project</div>
+          <div style="color:#e9d5ff; font-size:11px; margin:3px 0; padding-left:12px;">📄 index.html</div>
+          <div style="color:#c4b5fd; font-size:11px; margin:3px 0; padding-left:12px;">🎨 style.css</div>
+          <div style="color:#c4b5fd; font-size:11px; margin:3px 0; padding-left:12px;">⚙️ app.js</div>
+          <div style="color:#a855f7; font-size:10px; margin-top:14px; margin-bottom:4px; font-family:'Sarabun',sans-serif;">🤖 AI TOOLS</div>
+          <div style="color:#e9d5ff; font-size:11px; margin:3px 0;">✨ AI Autocomplete</div>
+          <div style="color:#c4b5fd; font-size:11px; margin:3px 0;">💬 AI Chat</div>
+          <div style="color:#c4b5fd; font-size:11px; margin:3px 0;">🔍 AI Explain</div>
+        </div>
+        <!-- EDITOR -->
+        <div style="background:#160730; padding:12px; font-size:11px; line-height:1.8;">
+          <span style="color:#6b7280;">1 </span><span style="color:#7c3aed;">&lt;!DOCTYPE html&gt;</span><br>
+          <span style="color:#6b7280;">2 </span><span style="color:#7c3aed;">&lt;html</span> <span style="color:#0ea5e9;">lang</span><span style="color:#c4b5fd;">="th"</span><span style="color:#7c3aed;">&gt;</span><br>
+          <span style="color:#6b7280;">3 </span><span style="color:#7c3aed;">&lt;head&gt;</span><br>
+          <span style="color:#6b7280;">4 </span>&nbsp;&nbsp;<span style="color:#7c3aed;">&lt;title&gt;</span><span style="color:#e9d5ff;">เว็บแอปของฉัน</span><span style="color:#7c3aed;">&lt;/title&gt;</span><br>
+          <span style="color:#6b7280;">5 </span><span style="color:#7c3aed;">&lt;/head&gt;</span><br>
+          <span style="color:#6b7280;">6 </span><span style="color:#7c3aed;">&lt;body&gt;</span><br>
+          <span style="color:#6b7280;">7 </span>&nbsp;&nbsp;<span style="color:#a855f7;">| AI แนะนำ: เพิ่ม &lt;meta charset="UTF-8"&gt; </span><span style="background:#3b0764; color:#e9d5ff; padding:1px 6px; border-radius:3px; font-size:10px;">Tab ยืนยัน</span><br>
+          <span style="color:#6b7280;">8 </span>&nbsp;&nbsp;<span style="color:#7c3aed;">&lt;h1&gt;</span><span style="color:#e9d5ff;">สวัสดีชาวโลก</span><span style="color:#7c3aed;">&lt;/h1&gt;</span><br>
+          <span style="color:#6b7280;">9 </span><span style="color:#7c3aed;">&lt;/body&gt;</span><br>
+          <span style="color:#6b7280;">10</span><span style="color:#7c3aed;">&lt;/html&gt;</span>
+        </div>
+        <!-- AI PANEL -->
+        <div style="background:#2e1065; padding:12px; border-radius:0 6px 6px 0; font-family:'Sarabun',sans-serif;">
+          <div style="color:#a855f7; font-size:10px; margin-bottom:10px; border-bottom:1px solid #4c1d95; padding-bottom:6px;">🤖 AI ASSISTANT</div>
+          <div style="background:#1e0a3c; border-radius:6px; padding:8px; margin-bottom:8px; font-size:11px; color:#c4b5fd; line-height:1.6;">
+            ตรวจพบว่ายังไม่มี <code style="background:#4c1d95;color:#e9d5ff;padding:1px 4px;border-radius:3px;font-size:10px;">&lt;meta charset&gt;</code><br>แนะนำให้เพิ่มเพื่อรองรับภาษาไทยอย่างถูกต้อง
+          </div>
+          <div style="background:#4c1d95; border-radius:6px; padding:8px; font-size:11px; color:#e9d5ff; line-height:1.6;">
+            <div style="color:#a855f7; font-size:10px; margin-bottom:4px;">💬 พิมพ์คำถาม AI</div>
+            ช่วยสร้างปุ่มสีม่วง...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note info" style="margin-top:14px;"><i class="fa-solid fa-circle-info" style="color:#2563eb;"></i>สังเกตว่า AI Panel อยู่ด้านขวา — ขณะเขียนโค้ดสามารถถาม AI ได้ทันทีโดยไม่ต้องเปลี่ยน Tab หรือเปิดเบราว์เซอร์ใหม่</div>
+  </div>
+
+  <!-- 4 EXTENSIONS -->
+  <div class="section" id="extensions">
+    <div class="section-title"><i class="fa-solid fa-puzzle-piece"></i>4. ส่วนขยาย AI ที่แนะนำใน Antigravity</div>
+    <p>ส่วนขยาย (Extensions) ช่วยเพิ่มความสามารถของ Antigravity IDE — ติดตั้งได้จากเมนู <code>Extensions → Marketplace</code> ค้นหาชื่อส่วนขยายแล้วกด Install</p>
+
+    <div class="ext-grid">
+      <div class="ext-card">
+        <div class="ext-name"><i class="fa-solid fa-robot" style="margin-right:6px;color:var(--accent);"></i>AI Copilot Pro</div>
+        <div class="ext-id">antigravity.ai-copilot-pro</div>
+        <div class="ext-desc">เติมโค้ดอัตโนมัติขณะพิมพ์ วิเคราะห์ context ทั้งไฟล์ รองรับ HTML, CSS, JavaScript, และ Python</div>
+        <div class="ext-badge">แนะนำอันดับ 1</div>
+      </div>
+      <div class="ext-card" style="border-top-color:#2563eb;">
+        <div class="ext-name"><i class="fa-solid fa-comment-code" style="margin-right:6px;color:#2563eb;"></i>IntelliChat AI</div>
+        <div class="ext-id">antigravity.intellichat</div>
+        <div class="ext-desc">แชทกับ AI ได้โดยตรงใน IDE เลือก Highlight โค้ดแล้วถามได้เลย รองรับ Claude, GPT-4, Gemini</div>
+        <div class="ext-badge" style="background:#bfdbfe;color:#1e3a8a;">AI Chat</div>
+      </div>
+      <div class="ext-card" style="border-top-color:#16a34a;">
+        <div class="ext-name"><i class="fa-solid fa-bug-slash" style="margin-right:6px;color:#16a34a;"></i>SmartDebug AI</div>
+        <div class="ext-id">antigravity.smartdebug</div>
+        <div class="ext-desc">ตรวจจับ Error อัตโนมัติ บอกสาเหตุและวิธีแก้ไขเป็นภาษาไทย พร้อม Quick Fix แบบคลิกเดียว</div>
+        <div class="ext-badge" style="background:#bbf7d0;color:#166534;">Debug</div>
+      </div>
+      <div class="ext-card" style="border-top-color:#d97706;">
+        <div class="ext-name"><i class="fa-solid fa-palette" style="margin-right:6px;color:#d97706;"></i>StyleSense AI</div>
+        <div class="ext-id">antigravity.stylesense</div>
+        <div class="ext-desc">แนะนำ CSS และ UI Design อัตโนมัติ Preview สีและ layout ก่อนใช้จริง เหมาะสำหรับ front-end</div>
+        <div class="ext-badge" style="background:#fde68a;color:#92400e;">CSS</div>
+      </div>
+      <div class="ext-card" style="border-top-color:#db2777;">
+        <div class="ext-name"><i class="fa-solid fa-language" style="margin-right:6px;color:#db2777;"></i>Thai Prompt Bridge</div>
+        <div class="ext-id">antigravity.thai-prompt</div>
+        <div class="ext-desc">เขียน Prompt ภาษาไทยแล้วแปลงเป็น Prompt ภาษาอังกฤษที่มีคุณภาพสูงก่อนส่งให้ AI อัตโนมัติ</div>
+        <div class="ext-badge" style="background:#fbcfe8;color:#9d174d;">ภาษาไทย</div>
+      </div>
+      <div class="ext-card" style="border-top-color:#0891b2;">
+        <div class="ext-name"><i class="fa-solid fa-file-code" style="margin-right:6px;color:#0891b2;"></i>DocGen AI</div>
+        <div class="ext-id">antigravity.docgen</div>
+        <div class="ext-desc">สร้าง Comment และ Documentation จากโค้ดอัตโนมัติ เลือก function แล้วกด <code>Ctrl+Shift+D</code></div>
+        <div class="ext-badge" style="background:#cffafe;color:#164e63;">Documentation</div>
+      </div>
+    </div>
+
+    <p style="font-weight:700; margin-top:20px; margin-bottom:8px;">วิธีติดตั้งส่วนขยาย</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">เปิด Antigravity IDE → คลิกไอคอน <i class="fa-solid fa-puzzle-piece" style="color:var(--accent);"></i> ที่แถบด้านซ้าย หรือกด <code>Ctrl+Shift+X</code></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">พิมพ์ชื่อส่วนขยาย เช่น <code>AI Copilot Pro</code> หรือ ID เช่น <code>antigravity.ai-copilot-pro</code> ในช่องค้นหา</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">คลิกปุ่ม <strong>Install</strong> → รอสักครู่ → Reload IDE เมื่อระบบแจ้ง</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">ตั้งค่าส่วนขยาย: <code>Settings → Extensions → ชื่อส่วนขยาย</code> → ใส่ API Key ของ AI ที่เลือกใช้</div>
+      </div>
+    </div>
+
+    <div class="note warn"><i class="fa-solid fa-triangle-exclamation" style="color:#d97706;"></i><strong>API Key ส่วนตัว:</strong> ส่วนขยาย AI บางตัวต้องใช้ API Key จากผู้ให้บริการ เช่น Anthropic (Claude), OpenAI (GPT-4) — ไม่ควรแชร์ API Key กับผู้อื่นเด็ดขาด</div>
+  </div>
+
+  <!-- 5 PROMPTING -->
+  <div class="section" id="prompting">
+    <div class="section-title pink"><i class="fa-solid fa-comment-dots" style="color:#db2777;"></i>5. การเขียน Prompt ให้ได้ผลลัพธ์ที่ดี</div>
+    <p>คุณภาพของโค้ดที่ AI สร้างขึ้นขึ้นอยู่กับ <strong>คุณภาพของ Prompt</strong> เป็นหลัก — การบรรยายที่ชัดเจนและครบถ้วนจะให้ผลลัพธ์ที่ดีกว่ามาก</p>
+
+    <p style="font-weight:700; color: var(--accent); margin-bottom: 4px; margin-top: 16px;"><i class="fa-solid fa-circle-xmark" style="color:#dc2626; margin-right:6px;"></i>Prompt ที่ไม่ดี (คลุมเครือ)</p>
+    <div class="prompt-box" style="border-color:#fca5a5; background:#fef2f2;">
+      <div style="position:absolute;top:-10px;left:14px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:8px;font-family:'Sarabun',sans-serif;">ตัวอย่างที่ไม่ดี</div>
+      <div class="pq"><i class="fa-solid fa-comment" style="color:#dc2626;"></i> ทำปุ่มให้หน่อย</div>
+    </div>
+
+    <p style="font-weight:700; color: var(--accent); margin-bottom: 4px; margin-top: 16px;"><i class="fa-solid fa-circle-check" style="color:#16a34a; margin-right:6px;"></i>Prompt ที่ดี (ชัดเจน ครบถ้วน)</p>
+    <div class="prompt-box">
+      <div class="pq">
+        <i class="fa-solid fa-comment"></i>
+        สร้างปุ่ม HTML + CSS ที่มีลักษณะดังนี้:<br>
+        — ข้อความ: "สมัครสมาชิก" พร้อมไอคอน Font Awesome รูปจดหมาย<br>
+        — สีพื้นหลัง: สีม่วง (#7c3aed) เปลี่ยนเป็น (#5b21b6) เมื่อ hover<br>
+        — ขนาดตัวอักษร 16px, padding 12px 28px, border-radius 8px<br>
+        — มี transition animation 0.2s<br>
+        — อธิบายทุกบรรทัดด้วยคำอธิบายภาษาไทย
+      </div>
+    </div>
+
+    <table class="tbl" style="margin-top:18px;">
+      <tr><th>องค์ประกอบ Prompt ที่ดี</th><th>คำอธิบาย</th><th>ตัวอย่าง</th></tr>
+      <tr><td><strong>บอกว่าต้องการอะไร</strong></td><td>ระบุสิ่งที่ต้องการสร้างให้ชัดเจน</td><td><code>สร้างฟอร์ม, สร้างตาราง, สร้างเมนู</code></td></tr>
+      <tr><td><strong>ระบุ Technology</strong></td><td>บอกว่าใช้ภาษาหรือ Framework อะไร</td><td><code>HTML + CSS, ใช้ Tailwind, เขียน JS vanilla</code></td></tr>
+      <tr><td><strong>บอกรูปลักษณ์ที่ต้องการ</strong></td><td>สี, ขนาด, รูปแบบ, สไตล์</td><td><code>สีม่วง #7c3aed, กว้าง 400px, rounded corners</code></td></tr>
+      <tr><td><strong>ระบุพฤติกรรม</strong></td><td>สิ่งที่เกิดขึ้นเมื่อ interact</td><td><code>คลิกแล้วแสดง alert, hover เปลี่ยนสี</code></td></tr>
+      <tr><td><strong>ขอคำอธิบายด้วย</strong></td><td>ให้ AI อธิบายโค้ดที่สร้าง</td><td><code>อธิบายทุกบรรทัดเป็นภาษาไทย</code></td></tr>
+    </table>
+
+    <p style="font-weight:700; margin-top:20px; margin-bottom:8px;"><i class="fa-solid fa-star" style="color:var(--accent);margin-right:6px;"></i>เทมเพลต Prompt สำหรับงานทั่วไป</p>
+
+    <div class="prompt-box">
+      <div class="pq">
+        <i class="fa-solid fa-code"></i>
+        สร้าง <span style="color:#db2777;">[สิ่งที่ต้องการ]</span> โดยใช้ <span style="color:#db2777;">[ภาษา/Framework]</span><br>
+        ความต้องการ:<br>
+        — <span style="color:#db2777;">[รายละเอียด 1]</span><br>
+        — <span style="color:#db2777;">[รายละเอียด 2]</span><br>
+        — <span style="color:#db2777;">[รายละเอียด 3]</span><br>
+        รูปแบบที่ต้องการ: <span style="color:#db2777;">[responsive / dark mode / minimal / ...]</span><br>
+        กรุณาอธิบายโค้ดแต่ละส่วนเป็นภาษาไทย
+      </div>
+    </div>
+
+    <div class="note green"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i><strong>Prompt แบบต่อเนื่อง (Follow-up):</strong> ถ้าผลลัพธ์ยังไม่ตรงใจ ไม่ต้องเริ่มใหม่ — พิมพ์ต่อเนื่องได้เลย เช่น <em>"ปรับสีปุ่มให้เข้มขึ้น"</em> หรือ <em>"เพิ่ม animation เมื่อ hover"</em></div>
+  </div>
+
+  <!-- 6 WORKFLOW -->
+  <div class="section" id="workflow">
+    <div class="section-title"><i class="fa-solid fa-diagram-project"></i>6. Workflow การพัฒนาเว็บแอปด้วย AI</div>
+    <p>กระบวนการที่แนะนำในการใช้ AI ช่วยพัฒนาเว็บแอปตั้งแต่เริ่มต้นจนเสร็จ</p>
+
+    <div class="flow" style="flex-direction:column; align-items:stretch; gap:10px;">
+      <div style="display:flex; align-items:center; gap:12px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:14px 18px;">
+        <div style="width:36px;height:36px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0;">1</div>
+        <div>
+          <div style="font-weight:700; color:var(--accent);">วางแผน (Planning)</div>
+          <div style="font-size:13.5px; color:var(--muted);">บอก AI ว่าต้องการสร้างเว็บแอปอะไร กลุ่มเป้าหมายคือใคร มีฟีเจอร์อะไรบ้าง — ให้ AI ช่วยเสนอโครงสร้างและ Technology ที่เหมาะสม</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--accent2);font-size:18px;"><i class="fa-solid fa-arrow-down"></i></div>
+      <div style="display:flex; align-items:center; gap:12px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:14px 18px;">
+        <div style="width:36px;height:36px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0;">2</div>
+        <div>
+          <div style="font-weight:700; color:var(--accent);">สร้างโครงสร้าง HTML (Scaffolding)</div>
+          <div style="font-size:13.5px; color:var(--muted);">ให้ AI สร้าง HTML โครงหลักก่อน — Header, Main, Footer, และ Section ต่าง ๆ โดยไม่ต้องมี CSS ก่อน</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--accent2);font-size:18px;"><i class="fa-solid fa-arrow-down"></i></div>
+      <div style="display:flex; align-items:center; gap:12px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:14px 18px;">
+        <div style="width:36px;height:36px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0;">3</div>
+        <div>
+          <div style="font-weight:700; color:var(--accent);">ออกแบบหน้าตา (Styling)</div>
+          <div style="font-size:13.5px; color:var(--muted);">บอก AI รูปแบบที่ต้องการ เช่น สีม่วง, minimal, modern — AI จะสร้าง CSS ที่เหมาะสม ใช้ Live Preview ตรวจผลทันที</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--accent2);font-size:18px;"><i class="fa-solid fa-arrow-down"></i></div>
+      <div style="display:flex; align-items:center; gap:12px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:14px 18px;">
+        <div style="width:36px;height:36px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0;">4</div>
+        <div>
+          <div style="font-weight:700; color:var(--accent);">เพิ่มฟังก์ชันการทำงาน (Logic)</div>
+          <div style="font-size:13.5px; color:var(--muted);">ให้ AI เขียน JavaScript ทีละฟังก์ชัน อธิบายว่าแต่ละปุ่มหรือฟอร์มควรทำงานอย่างไร ทดสอบทีละส่วน</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--accent2);font-size:18px;"><i class="fa-solid fa-arrow-down"></i></div>
+      <div style="display:flex; align-items:center; gap:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:14px 18px;">
+        <div style="width:36px;height:36px;background:#16a34a;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0;">5</div>
+        <div>
+          <div style="font-weight:700; color:#16a34a;">ทดสอบและแก้ไข (Test & Fix)</div>
+          <div style="font-size:13.5px; color:var(--muted);">ทดสอบเว็บแอป หากพบ Bug ให้ Copy Error message แล้วถาม AI ว่าเกิดจากอะไรและแก้ไขอย่างไร ใช้ SmartDebug AI ช่วย</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note"><i class="fa-solid fa-rotate" style="color:var(--accent);"></i><strong>Iterate เสมอ:</strong> ไม่มีใครที่ AI ตอบแล้วถูกต้อง 100% ทันที — ทำซ้ำวงจร "ขอ → ดูผล → ปรับ Prompt → ขอใหม่" จนได้ผลลัพธ์ที่ต้องการ</div>
+  </div>
+
+  <!-- 7 DEMO -->
+  <div class="section" id="demo">
+    <div class="section-title blue"><i class="fa-solid fa-code" style="color:#2563eb;"></i>7. ตัวอย่างการใช้งานจริง — สร้างหน้า Login</div>
+    <p>ตัวอย่างการสนทนากับ AI Copilot Pro ใน Antigravity IDE เพื่อสร้างหน้า Login แบบ step-by-step</p>
+
+    <div class="chat-mock">
+      <div class="chat-msg">
+        <div class="chat-avatar user">K</div>
+        <div>
+          <div class="chat-label user">คุณ (ผู้พัฒนา)</div>
+          <div class="chat-bubble user">
+            สร้างหน้า Login ด้วย HTML + CSS ที่มีช่องกรอก Username และ Password ธีมสีม่วง มีปุ่ม Login และลิงก์ "ลืมรหัสผ่าน?" อธิบายทุกส่วนเป็นภาษาไทย
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar ai"><i class="fa-solid fa-robot" style="font-size:12px;"></i></div>
+        <div>
+          <div class="chat-label ai">AI Copilot Pro</div>
+          <div class="chat-bubble ai">
+            นี่คือโค้ดหน้า Login ธีมสีม่วง พร้อมคำอธิบาย:<br><br>
+            <code>form.login-box</code> — กล่องหลัก กว้าง 400px, shadow, rounded<br>
+            <code>input[type="text"]</code>, <code>input[type="password"]</code> — ช่องกรอกมี border สีม่วง<br>
+            <code>button.login-btn</code> — ปุ่ม gradient สีม่วง, hover ทำให้เข้มขึ้น<br>
+            <code>a.forgot-link</code> — ลิงก์ขนาดเล็ก จัด align-right<br><br>
+            <strong>ต้องการปรับอะไรเพิ่มเติมไหม?</strong>
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar user">K</div>
+        <div>
+          <div class="chat-label user">คุณ (ผู้พัฒนา)</div>
+          <div class="chat-bubble user">
+            เพิ่ม JavaScript ที่ตรวจสอบว่าช่องกรอกไม่ว่างก่อนส่งฟอร์ม ถ้าว่างให้แสดงข้อความแจ้งเตือนสีแดงใต้ช่องนั้น
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar ai"><i class="fa-solid fa-robot" style="font-size:12px;"></i></div>
+        <div>
+          <div class="chat-label ai">AI Copilot Pro</div>
+          <div class="chat-bubble ai">
+            เพิ่ม Validation ด้วย JavaScript แล้ว:<br><br>
+            <code>form.addEventListener('submit', fn)</code> — จับ event การ submit<br>
+            <code>e.preventDefault()</code> — ป้องกัน refresh หน้า<br>
+            <code>showError(input, msg)</code> — แสดงข้อความแดงใต้ช่อง<br>
+            <code>clearError(input)</code> — ลบข้อความเมื่อเริ่มพิมพ์ใหม่<br><br>
+            <strong>ต้องการเชื่อมต่อกับ Backend หรือเพิ่ม show/hide password ไหม?</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-weight: 700; margin-top: 18px; margin-bottom: 8px;">โค้ดที่ AI สร้างขึ้น (พร้อม Comment ภาษาไทย)</p>
+
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)"><i class="fa-solid fa-copy"></i> คัดลอก</button>
+<pre class="code-block"><span class="tg">&lt;!-- ============================================</span>
+<span class="tg">     หน้า Login — สร้างโดย AI Copilot Pro
+     Antigravity IDE + IntelliChat AI
+     ============================================ --&gt;</span>
+<span class="tg">&lt;style&gt;</span>
+  <span class="cm">/* ── ตัวแปรสีธีมม่วง ─────────────────────────── */</span>
+  <span class="sl">:root</span> {
+    <span class="at">--purple</span>:     <span class="vl">#7c3aed</span>;
+    <span class="at">--purple-dark</span>: <span class="vl">#5b21b6</span>;
+    <span class="at">--purple-light</span>:<span class="vl">#ede9fe</span>;
+  }
+
+  <span class="cm">/* ── จัดกลางหน้าจอ ───────────────────────────── */</span>
+  <span class="sl">body</span> {
+    <span class="at">display</span>: <span class="vl">flex</span>;
+    <span class="at">justify-content</span>: <span class="vl">center</span>;
+    <span class="at">align-items</span>: <span class="vl">center</span>;
+    <span class="at">min-height</span>: <span class="vl">100vh</span>;
+    <span class="at">background</span>: <span class="vl">#faf5ff</span>; <span class="cm">/* พื้นหลังม่วงอ่อนมาก */</span>
+  }
+
+  <span class="cm">/* ── กล่อง Login หลัก ────────────────────────── */</span>
+  <span class="sl">.login-box</span> {
+    <span class="at">background</span>: <span class="vl">#fff</span>;
+    <span class="at">border-radius</span>: <span class="vl">16px</span>;
+    <span class="at">padding</span>: <span class="vl">40px 36px</span>;
+    <span class="at">width</span>: <span class="vl">400px</span>;
+    <span class="at">box-shadow</span>: <span class="vl">0 8px 32px rgba(124,58,237,0.15)</span>; <span class="cm">/* เงาสีม่วง */</span>
+    <span class="at">border-top</span>: <span class="vl">4px solid var(--purple)</span>;        <span class="cm">/* เส้นสีม่วงด้านบน */</span>
+  }
+
+  <span class="cm">/* ── ปุ่ม Login ──────────────────────────────── */</span>
+  <span class="sl">.login-btn</span> {
+    <span class="at">background</span>: <span class="vl">linear-gradient(135deg, var(--purple), var(--purple-dark))</span>;
+    <span class="at">color</span>: <span class="vl">#fff</span>;
+    <span class="at">width</span>: <span class="vl">100%</span>;
+    <span class="at">padding</span>: <span class="vl">12px</span>;
+    <span class="at">border</span>: <span class="vl">none</span>;
+    <span class="at">border-radius</span>: <span class="vl">8px</span>;
+    <span class="at">font-size</span>: <span class="vl">16px</span>;
+    <span class="at">cursor</span>: <span class="vl">pointer</span>;
+    <span class="at">transition</span>: <span class="vl">transform 0.15s, box-shadow 0.15s</span>;
+  }
+  <span class="sl">.login-btn:hover</span> {
+    <span class="at">transform</span>: <span class="vl">translateY(-2px)</span>;        <span class="cm">/* ยกปุ่มขึ้นเล็กน้อยเมื่อ hover */</span>
+    <span class="at">box-shadow</span>: <span class="vl">0 6px 20px rgba(124,58,237,0.4)</span>;
+  }
+
+  <span class="cm">/* ── ข้อความแจ้งเตือน Error ─────────────────── */</span>
+  <span class="sl">.error-msg</span> {
+    <span class="at">color</span>: <span class="vl">#dc2626</span>;
+    <span class="at">font-size</span>: <span class="vl">12px</span>;
+    <span class="at">margin-top</span>: <span class="vl">4px</span>;
+    <span class="at">display</span>: <span class="vl">none</span>;            <span class="cm">/* ซ่อนไว้ก่อน JS จะแสดงเมื่อ error */</span>
+  }
+  <span class="sl">.error-msg.show</span> { <span class="at">display</span>: <span class="vl">block</span>; }
+<span class="tg">&lt;/style&gt;</span>
+
+<span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"login-box"</span><span class="tg">&gt;</span>
+  <span class="tg">&lt;h2&gt;</span>เข้าสู่ระบบ<span class="tg">&lt;/h2&gt;</span>
+
+  <span class="tg">&lt;form</span> <span class="at">id</span>=<span class="st">"loginForm"</span><span class="tg">&gt;</span>
+    <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"field"</span><span class="tg">&gt;</span>
+      <span class="tg">&lt;label&gt;</span>ชื่อผู้ใช้<span class="tg">&lt;/label&gt;</span>
+      <span class="tg">&lt;input</span> <span class="at">type</span>=<span class="st">"text"</span> <span class="at">id</span>=<span class="st">"username"</span> <span class="at">placeholder</span>=<span class="st">"ใส่ชื่อผู้ใช้"</span><span class="tg">&gt;</span>
+      <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"error-msg"</span> <span class="at">id</span>=<span class="st">"usernameErr"</span><span class="tg">&gt;</span>กรุณากรอกชื่อผู้ใช้<span class="tg">&lt;/div&gt;</span>
+    <span class="tg">&lt;/div&gt;</span>
+
+    <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"field"</span><span class="tg">&gt;</span>
+      <span class="tg">&lt;label&gt;</span>รหัสผ่าน<span class="tg">&lt;/label&gt;</span>
+      <span class="tg">&lt;input</span> <span class="at">type</span>=<span class="st">"password"</span> <span class="at">id</span>=<span class="st">"password"</span> <span class="at">placeholder</span>=<span class="st">"ใส่รหัสผ่าน"</span><span class="tg">&gt;</span>
+      <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="st">"error-msg"</span> <span class="at">id</span>=<span class="st">"passwordErr"</span><span class="tg">&gt;</span>กรุณากรอกรหัสผ่าน<span class="tg">&lt;/div&gt;</span>
+    <span class="tg">&lt;/div&gt;</span>
+
+    <span class="tg">&lt;button</span> <span class="at">type</span>=<span class="st">"submit"</span> <span class="at">class</span>=<span class="st">"login-btn"</span><span class="tg">&gt;</span>เข้าสู่ระบบ<span class="tg">&lt;/button&gt;</span>
+    <span class="tg">&lt;a</span> <span class="at">href</span>=<span class="st">"#"</span> <span class="at">class</span>=<span class="st">"forgot-link"</span><span class="tg">&gt;</span>ลืมรหัสผ่าน?<span class="tg">&lt;/a&gt;</span>
+  <span class="tg">&lt;/form&gt;</span>
+<span class="tg">&lt;/div&gt;</span>
+
+<span class="tg">&lt;script&gt;</span>
+<span class="cm">// ── จับ event การ submit ฟอร์ม ─────────────────</span>
+document.<span class="fn">getElementById</span>(<span class="st">'loginForm'</span>).<span class="fn">addEventListener</span>(<span class="st">'submit'</span>, <span class="kw">function</span>(e) {
+  e.<span class="fn">preventDefault</span>(); <span class="cm">// ป้องกัน browser reload หน้า</span>
+  <span class="kw">let</span> valid = <span class="kw">true</span>;
+
+  <span class="cm">// ── ตรวจช่อง Username ───────────────────────</span>
+  <span class="kw">const</span> username = document.<span class="fn">getElementById</span>(<span class="st">'username'</span>).value.<span class="fn">trim</span>();
+  <span class="kw">if</span> (!username) {
+    document.<span class="fn">getElementById</span>(<span class="st">'usernameErr'</span>).classList.<span class="fn">add</span>(<span class="st">'show'</span>);
+    valid = <span class="kw">false</span>;
+  } <span class="kw">else</span> {
+    document.<span class="fn">getElementById</span>(<span class="st">'usernameErr'</span>).classList.<span class="fn">remove</span>(<span class="st">'show'</span>);
+  }
+
+  <span class="cm">// ── ตรวจช่อง Password ───────────────────────</span>
+  <span class="kw">const</span> password = document.<span class="fn">getElementById</span>(<span class="st">'password'</span>).value;
+  <span class="kw">if</span> (!password) {
+    document.<span class="fn">getElementById</span>(<span class="st">'passwordErr'</span>).classList.<span class="fn">add</span>(<span class="st">'show'</span>);
+    valid = <span class="kw">false</span>;
+  } <span class="kw">else</span> {
+    document.<span class="fn">getElementById</span>(<span class="st">'passwordErr'</span>).classList.<span class="fn">remove</span>(<span class="st">'show'</span>);
+  }
+
+  <span class="cm">// ── ถ้าผ่านทุกการตรวจสอบ ────────────────────</span>
+  <span class="kw">if</span> (valid) {
+    <span class="fn">alert</span>(<span class="st">'เข้าสู่ระบบสำเร็จ!'</span>); <span class="cm">// ในงานจริงจะส่งข้อมูลไป Backend</span>
+  }
+});
+<span class="tg">&lt;/script&gt;</span></pre>
+    </div>
+
+    <table class="tbl">
+      <tr><th>เทคนิค JavaScript ที่ใช้</th><th>อธิบาย</th></tr>
+      <tr><td><code>addEventListener('submit', fn)</code></td><td>จับ event เมื่อกดปุ่ม submit ฟอร์ม</td></tr>
+      <tr><td><code>e.preventDefault()</code></td><td>ป้องกัน browser reload หน้าเมื่อกด submit</td></tr>
+      <tr><td><code>.value.trim()</code></td><td>อ่านค่าจาก input และตัดช่องว่างหัวท้าย</td></tr>
+      <tr><td><code>classList.add('show')</code></td><td>เพิ่ม class เพื่อแสดง error message</td></tr>
+      <tr><td><code>classList.remove('show')</code></td><td>ลบ class เพื่อซ่อน error message</td></tr>
+    </table>
+  </div>
+
+  <!-- 8 TIPS -->
+  <div class="section" id="tips">
+    <div class="section-title green"><i class="fa-solid fa-lightbulb" style="color:#16a34a;"></i>8. เทคนิคและแนวปฏิบัติที่ดี</div>
+
+    <div class="card-grid">
+      <div class="card" style="border-left: 3px solid var(--accent);">
+        <div class="ck"><i class="fa-solid fa-scissors" style="margin-right:6px;"></i>แบ่งงานเป็นชิ้นเล็ก</div>
+        <div class="ch">ขอ AI ทีละฟีเจอร์ อย่าถามทุกอย่างในครั้งเดียว เพราะโค้ดยาวมากทำให้ยากต่อการตรวจสอบ</div>
+      </div>
+      <div class="card" style="border-left: 3px solid #2563eb;">
+        <div class="ck"><i class="fa-solid fa-copy" style="margin-right:6px;color:#2563eb;"></i>เข้าใจก่อน Copy</div>
+        <div class="ch">อ่านคำอธิบาย AI ก่อนนำโค้ดไปใช้เสมอ ถ้าไม่เข้าใจส่วนไหน ถาม AI เพิ่มเติม</div>
+        <div class="ci" style="background:#bfdbfe;color:#1e3a8a;">สำคัญมาก</div>
+      </div>
+      <div class="card" style="border-left: 3px solid #16a34a;">
+        <div class="ck"><i class="fa-solid fa-vials" style="margin-right:6px;color:#16a34a;"></i>ทดสอบทุกฟีเจอร์</div>
+        <div class="ch">หลังรับโค้ดจาก AI ทดสอบทันทีใน Live Preview ก่อน copy ไปใช้ในโปรเจกต์จริง</div>
+      </div>
+      <div class="card" style="border-left: 3px solid #d97706;">
+        <div class="ck"><i class="fa-solid fa-comments" style="margin-right:6px;color:#d97706;"></i>ให้ Feedback กลับ</div>
+        <div class="ch">บอก AI ว่าผลลัพธ์ยังไม่ตรงใจอย่างไร เช่น "สีเข้มเกินไป" หรือ "ปุ่มใหญ่เกิน"</div>
+      </div>
+      <div class="card" style="border-left: 3px solid #db2777;">
+        <div class="ck"><i class="fa-solid fa-bookmark" style="margin-right:6px;color:#db2777;"></i>บันทึก Prompt ที่ดี</div>
+        <div class="ch">เก็บ Prompt ที่ให้ผลลัพธ์ดีไว้ใน Notepad เพื่อนำมาใช้ซ้ำหรือดัดแปลงในงานถัดไป</div>
+      </div>
+      <div class="card" style="border-left: 3px solid #0891b2;">
+        <div class="ck"><i class="fa-solid fa-arrows-rotate" style="margin-right:6px;color:#0891b2;"></i>Refactor เป็นระยะ</div>
+        <div class="ch">ขอให้ AI ทบทวนและปรับปรุงโค้ดที่มีอยู่ให้อ่านง่ายขึ้น ลด code ซ้ำซ้อน</div>
+      </div>
+    </div>
+
+    <div class="note pink" style="margin-top:18px;"><i class="fa-solid fa-star" style="color:#db2777;"></i><strong>Shortcut ที่ควรจำ:</strong> ใน Antigravity IDE กด <code>Ctrl+I</code> เพื่อเปิด AI Inline Edit — เลือก code ที่ต้องการแก้แล้วบอก AI ว่าต้องการปรับอะไร ไม่ต้อง copy-paste เอง</div>
+  </div>
+
+  <!-- 9 LIMITS -->
+  <div class="section" id="limits">
+    <div class="section-title amber"><i class="fa-solid fa-scale-balanced" style="color:#d97706;"></i>9. ข้อควรระวังในการใช้ AI เขียนโค้ด</div>
+    <p>AI เป็นเครื่องมือที่ทรงพลัง แต่มีข้อจำกัดที่ต้องตระหนัก เพื่อให้ใช้งานได้อย่างมีประสิทธิภาพและปลอดภัย</p>
+
+    <table class="tbl">
+      <tr><th>สิ่งที่ควรระวัง</th><th>รายละเอียด</th><th>วิธีรับมือ</th></tr>
+      <tr>
+        <td><strong><i class="fa-solid fa-triangle-exclamation" style="color:#d97706;"></i> AI อาจผิดพลาดได้</strong></td>
+        <td>โค้ดจาก AI อาจมี Bug หรือไม่ทำงานตามที่คาด โดยเฉพาะโค้ดที่ซับซ้อน</td>
+        <td>ทดสอบโค้ดทุกครั้งก่อนนำไปใช้ ไม่ใช้โค้ดที่ไม่เข้าใจ</td>
+      </tr>
+      <tr>
+        <td><strong><i class="fa-solid fa-lock" style="color:#dc2626;"></i> ความปลอดภัย</strong></td>
+        <td>อย่าส่งข้อมูลส่วนตัว รหัสผ่าน หรือ API Key ไปให้ AI โดยตรงใน Prompt</td>
+        <td>ใช้ตัวอย่าง (dummy data) แทนข้อมูลจริงเสมอ</td>
+      </tr>
+      <tr>
+        <td><strong><i class="fa-solid fa-brain" style="color:#7c3aed;"></i> พึ่งพา AI มากเกินไป</strong></td>
+        <td>หากไม่เข้าใจโค้ดที่ AI สร้าง จะแก้ Bug ยากมากเมื่อเกิดปัญหา</td>
+        <td>ขอให้ AI อธิบายทุกครั้ง และฝึกเขียนโค้ดพื้นฐานด้วยตัวเอง</td>
+      </tr>
+      <tr>
+        <td><strong><i class="fa-solid fa-gavel" style="color:#dc2626;"></i> ลิขสิทธิ์โค้ด</strong></td>
+        <td>โค้ดจาก AI อาจมีส่วนที่คล้ายกับโค้ดที่มีลิขสิทธิ์ในชุดข้อมูลฝึก</td>
+        <td>ตรวจสอบ License ก่อนใช้ในโปรเจกต์เชิงพาณิชย์</td>
+      </tr>
+      <tr>
+        <td><strong><i class="fa-solid fa-clock" style="color:#0891b2;"></i> ข้อมูลอาจล้าสมัย</strong></td>
+        <td>AI อาจไม่รู้จัก Library หรือ API เวอร์ชันใหม่ล่าสุด</td>
+        <td>ตรวจสอบ Official Documentation เสมอสำหรับ syntax ที่สำคัญ</td>
+      </tr>
+      <tr>
+        <td><strong><i class="fa-solid fa-network-wired" style="color:#7c3aed;"></i> ต้องการอินเทอร์เน็ต</strong></td>
+        <td>ส่วนขยาย AI ส่วนใหญ่ต้องเชื่อมต่ออินเทอร์เน็ตเพื่อทำงาน</td>
+        <td>เตรียม Snippet โค้ดที่ใช้บ่อยไว้ในเครื่องสำรองไว้ด้วย</td>
+      </tr>
+    </table>
+
+    <div class="note warn"><i class="fa-solid fa-triangle-exclamation" style="color:#d97706;"></i><strong>สรุปหลักการ:</strong> ใช้ AI เป็น <strong>"ผู้ช่วย"</strong> ไม่ใช่ <strong>"ผู้แทน"</strong> — การตัดสินใจขั้นสุดท้ายและการทำความเข้าใจโค้ดยังคงต้องเป็นของนักพัฒนาเสมอ</div>
+
+    <div style="margin-top:20px; padding:18px; background: linear-gradient(135deg, #f5f3ff, #ede9fe); border-radius:10px; border:1px solid #c4b5fd;">
+      <p style="font-weight:700; color:var(--accent); margin-bottom:10px;"><i class="fa-solid fa-road" style="margin-right:8px;"></i>ขั้นตอนต่อไปสำหรับนักเรียน</p>
+      <ul style="margin-left:18px; color:var(--dark); line-height:2;">
+        <li>ติดตั้ง Antigravity IDE และส่วนขยาย <strong>AI Copilot Pro</strong> กับ <strong>IntelliChat AI</strong></li>
+        <li>ฝึกเขียน Prompt โดยเริ่มจากงานง่าย เช่น สร้างปุ่มหรือการ์ด</li>
+        <li>นำ Workflow 5 ขั้นตอนไปใช้กับโปรเจกต์เว็บแอปของตัวเอง</li>
+        <li>บันทึก Prompt ที่ได้ผลดีไว้เป็น Collection ส่วนตัว</li>
+        <li>แชร์ผลงานและ Prompt ที่น่าสนใจในห้องเรียน</li>
+      </ul>
+    </div>
+  </div>
+
+</main>
+
+<footer><i class="fa-solid fa-school"></i>เอกสารประกอบการเรียน — วิชาการพัฒนาเว็บแอปสมัยใหม่ โรงเรียนจอมทอง</footer>
+
+<script>
+  function copyCode(btn) {
+    const pre = btn.closest('.code-wrap').querySelector('pre.code-block');
+    const text = pre ? pre.innerText : '';
+    navigator.clipboard.writeText(text).then(function() {
+      btn.classList.add('copied');
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> คัดลอกแล้ว';
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<i class="fa-solid fa-copy"></i> คัดลอก';
+      }, 2000);
+    }).catch(function() {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      btn.classList.add('copied');
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> คัดลอกแล้ว';
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<i class="fa-solid fa-copy"></i> คัดลอก';
+      }, 2000);
+    });
+  }
+</script>
+
+</body>
+</html>
